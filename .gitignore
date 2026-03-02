@@ -7,3 +7,10 @@ node_modules/
 !/plugins/example/frontend.js
 !/plugins/example.js
 /plugins_configs
+_plugin_backups/
+config.json.bak*
+web/logs/
+web/index.ejs.bak*
+web/login.ejs.bak*
+web/js/main.js.bak*
+web/js/3las/main.js.bak*
