@@ -2,9 +2,16 @@ let Stream;
 let shouldReconnect = true;
 let newVolumeGlobal = 1;
 
+function syncPlayButtonState(isPlaying) {
+    const $playbutton = $('.playbutton');
+    $playbutton.attr('aria-pressed', isPlaying ? 'true' : 'false');
+    $playbutton.attr('aria-label', isPlaying ? 'Stop playback' : 'Start playback');
+}
+
 function Init(_ev) {
     $(".playbutton").off('click').on('click', OnPlayButtonClick);  // Ensure only one event handler is attached
     $("#volumeSlider").off("input").on("input", updateVolume);  // Ensure only one event handler is attached
+    syncPlayButtonState(false);
 }
 
 function createStream() {
@@ -44,6 +51,7 @@ function OnPlayButtonClick(_ev) {
         shouldReconnect = false;
         destroyStream();
         $playbutton.find('.fa-solid').toggleClass('fa-stop fa-play');
+        syncPlayButtonState(false);
         if (isAppleiOS && 'audioSession' in navigator) {
             navigator.audioSession.type = "none";
         }
@@ -53,6 +61,7 @@ function OnPlayButtonClick(_ev) {
         createStream();
         Stream.Start();
         $playbutton.find('.fa-solid').toggleClass('fa-play fa-stop');
+        syncPlayButtonState(true);
         if (isAppleiOS && 'audioSession' in navigator) {
             navigator.audioSession.type = "playback";
         }
@@ -76,4 +85,3 @@ function updateVolume() {
 }
 
 $(document).ready(Init);
-

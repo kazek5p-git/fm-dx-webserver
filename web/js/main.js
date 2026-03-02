@@ -31,6 +31,16 @@ const usa_programmes = [
 ];
 
 const rdsMode = localStorage.getItem('rdsMode');
+let lastScreenReaderAnnouncement = '';
+let lastScreenReaderState = {
+    frequency: null,
+    users: null,
+    station: null,
+    signalBucket: null,
+    announcedAt: 0
+};
+const SCREEN_READER_SIGNAL_STEP_DB = 2;
+const SCREEN_READER_SIGNAL_MIN_INTERVAL_MS = 12000;
 
 $(document).ready(function () {
     const signalToggle = $("#signal-units-toggle");
@@ -50,6 +60,7 @@ $(document).ready(function () {
     });
 
     fillPresets();
+    initAccessibility();
     
     signalToggle.on("change", function () {
         const signalText = localStorage.getItem('signalUnit');
@@ -283,6 +294,20 @@ $(document).ready(function () {
     initCanvas();
     initTooltips();
 });
+
+function initAccessibility() {
+    const keyboardSelectors = '[role="button"], #tuner-name, #data-station-others, .scroll-left, .scroll-right, .popup-close';
+
+    $(document).on('keydown', keyboardSelectors, function (event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            $(this).trigger('click');
+        }
+    });
+
+    $('.stereo-container').attr('aria-pressed', 'false');
+    $('.users-online').attr('aria-live', 'polite').attr('aria-atomic', 'true');
+}
 
 function getServerTime() {
     $.ajax({
@@ -946,9 +971,13 @@ function buildAltTxList(txList) {
 }
 
 function updateTextIfChanged($element, newText) {
-    if ($element.text() !== newText) {
-        $element.text(newText);
-    }
+    const textValue = String(newText ?? '');
+    $element.each(function() {
+        const $current = $(this);
+        if ($current.text() !== textValue) {
+            $current.text(textValue);
+        }
+    });
 }
 
 function updateHtmlIfChanged($element, newHtml) {
@@ -963,10 +992,65 @@ function updateDatasetValIfChanged($element, dataLabel, newVal) {
     }
 }
 
+function updateAttrIfChanged($element, attrName, newVal) {
+    const attrValue = String(newVal ?? '');
+    $element.each(function() {
+        const $current = $(this);
+        if ($current.attr(attrName) !== attrValue) {
+            $current.attr(attrName, attrValue);
+        }
+    });
+}
+
+function getSignalAnnouncementBucket(signalValue) {
+    if (!Number.isFinite(signalValue)) return null;
+    return Math.round(signalValue / SCREEN_READER_SIGNAL_STEP_DB) * SCREEN_READER_SIGNAL_STEP_DB;
+}
+
+function announceScreenReaderStatus(parsedData, averageSignal) {
+    const $srStatus = $('#sr-status');
+    if (!$srStatus.length) return;
+
+    const now = Date.now();
+    const frequency = String(parsedData?.freq ?? '?');
+    const users = String(parsedData?.users ?? '?');
+    const signalValue = Number.isFinite(averageSignal) ? Number(averageSignal.toFixed(1)) : null;
+    const signal = signalValue !== null ? signalValue.toFixed(1) : '?';
+    const signalBucket = getSignalAnnouncementBucket(signalValue);
+    const station = parsedData?.txInfo?.tx && parsedData.txInfo.tx !== '?' ? String(parsedData.txInfo.tx) : '';
+
+    const freqChanged = frequency !== lastScreenReaderState.frequency;
+    const usersChanged = users !== lastScreenReaderState.users;
+    const stationChanged = station !== lastScreenReaderState.station;
+    const signalChanged = signalBucket !== null && signalBucket !== lastScreenReaderState.signalBucket;
+    const anyChange = freqChanged || usersChanged || stationChanged || signalChanged;
+    if (!anyChange) return;
+
+    const onlySignalChanged = signalChanged && !freqChanged && !usersChanged && !stationChanged;
+    if (onlySignalChanged && (now - lastScreenReaderState.announcedAt) < SCREEN_READER_SIGNAL_MIN_INTERVAL_MS) {
+        return;
+    }
+
+    let message = `Frequency ${frequency} MHz, signal ${signal} dBf, users online ${users}`;
+    if (station) message += `, station ${station}`;
+
+    if (message !== lastScreenReaderAnnouncement) {
+        lastScreenReaderAnnouncement = message;
+        lastScreenReaderState = {
+            frequency,
+            users,
+            station,
+            signalBucket,
+            announcedAt: now
+        };
+        $srStatus.text(message);
+    }
+}
+
 // Main function to update data elements, optimized
 const updateDataElements = throttle(function(parsedData) {
     updateTextIfChanged($dataFrequency, parsedData.freq);
-    $commandInput.attr("aria-label", "Current frequency: " + parsedData.freq);
+    updateAttrIfChanged($commandInput, "aria-label", "Current frequency: " + parsedData.freq);
     updateHtmlIfChanged($dataPi, parsedData.pi === '?' ? "<span class='opacity-half'>?</span>" : parsedData.pi);
     
     if ($('#ps-underscores').is(':checked')) {
@@ -992,6 +1076,7 @@ const updateDataElements = throttle(function(parsedData) {
         $('.data-st.circle1').css('left', '0px');
         $('.data-st.circle2').css('display', 'block');
     }
+    $('.stereo-container').attr('aria-pressed', String(parsedData.stForced) === '1' ? 'true' : 'false');
     
     updateHtmlIfChanged($dataRt0, processString(parsedData.rt0, parsedData.rt0_errors));
     updateHtmlIfChanged($dataRt1, processString(parsedData.rt1, parsedData.rt1_errors));
@@ -1056,10 +1141,10 @@ const updateDataElements = throttle(function(parsedData) {
     }
     
     if (updateCounter % 30 === 0) {
-        $dataPs.attr('aria-label', parsedData.ps);
-        $dataRt0.attr('aria-label', parsedData.rt0);
-        $dataRt1.attr('aria-label', parsedData.rt1);
-        $('.users-online-container').attr("aria-label", "Online users: " + parsedData.users);
+        updateAttrIfChanged($dataPs, 'aria-label', parsedData.ps);
+        updateAttrIfChanged($dataRt0, 'aria-label', parsedData.rt0);
+        updateAttrIfChanged($dataRt1, 'aria-label', parsedData.rt1);
+        updateAttrIfChanged($('.users-online-container'), "aria-label", "Online users: " + parsedData.users);
     }
 }, 75); // Update at most once every 100 milliseconds
 
@@ -1111,7 +1196,11 @@ function updatePanels(parsedData) {
     
     updateDataElements(parsedData);
     updateSignalUnits(parsedData, averageSignal);
-    $('.users-online').text(parsedData.users);
+    updateTextIfChanged($('.users-online'), parsedData.users);
+
+    if (updateCounter % 20 === 0) {
+        announceScreenReaderStatus(parsedData, averageSignal);
+    }
 }
 
 function createListItem(element) {
@@ -1128,10 +1217,10 @@ function updateButtonState(buttonId, value) {
     if (button.length > 0) {
         if (value == 0) {
             button.hasClass("btn-disabled") ? null : button.addClass("btn-disabled");
-            button.attr('aria-description', 'Off');
+            button.attr('aria-pressed', 'false');
         } else {
             button.hasClass("btn-disabled") ? button.removeClass("btn-disabled") : null;
-            button.attr('aria-description', 'On');
+            button.attr('aria-pressed', 'true');
         }
     } else {
         console.log("Button not found!");
@@ -1176,7 +1265,9 @@ function showTunerDescription() {
     }
     
     $("#dashboard-panel-description").slideToggle(300, function() {
-        if (!$(this).is(":visible")) {
+        const isVisible = $(this).is(":visible");
+        $("#tuner-name").attr("aria-expanded", isVisible ? "true" : "false");
+        if (!isVisible) {
             parentDiv.css("border-radius", "");
         }
     });

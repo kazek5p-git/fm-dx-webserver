@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
     <title>Login - FM-DX Webserver</title>
     <link href="css/entry.css" type="text/css" rel="stylesheet">
     <link href="css/flags.min.css" type="text/css" rel="stylesheet">
@@ -16,14 +17,15 @@
     <div class="wrapper-outer wrapper-full">
     <div id="wrapper">
         <div class="panel-100 no-bg">
-            <img class="top-25" src="favicon.svg" height="64px">
+            <img class="top-25" src="favicon.svg" alt="FM-DX Webserver logo" height="64px">
             <p>You are currently not logged in as an administrator and therefore can't change the settings.</p>
             <p>Please login below.</p>
         </div>
         <div class="panel-100 p-bottom-20">
             <h1 class="text-light">Login</h1>
             <form action="./login" method="post" id="login-form">
-                <input type="password" id="password" name="password" placeholder="Password" style="width: 250px; background-color: var(--color-2); height: 48px; border-radius: 15px 0 0 15px" required>
+                <label for="password" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0, 0, 0, 0);white-space:nowrap;border:0;">Password</label>
+                <input type="password" id="password" name="password" aria-label="Password" placeholder="Password" style="width: 250px; background-color: var(--color-2); height: 48px; border-radius: 15px 0 0 15px" required>
                 <button type="submit" class="br-0 top-10 tooltip" style="height: 48px; width: 50px; margin-left: -4px;border-radius: 0 15px 15px 0;" role="button" aria-label="Log in" tabindex="0" data-tooltip="Log in">
                     <i class="fa-solid fa-right-to-bracket"></i>
                 </button>

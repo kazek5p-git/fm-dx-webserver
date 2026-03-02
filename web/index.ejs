@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <title><%= tunerName %> - FM-DX Webserver</title>
@@ -45,7 +45,7 @@
 <body>
   <div class="wrapper-outer dashboard-panel" style="padding-top: 20px; z-index: 10; position: relative;">
     <div class="panel-100-real m-0 flex-container bg-phone flex-phone-column" style="min-height: 64px; max-width: 1160px; margin-top: 10px;align-items: center; justify-content: space-between; padding-left: 20px;padding-right: 10px;">
-      <h1 id="tuner-name" class="text-left flex-container flex-phone flex-center" style="padding-bottom: 3px; padding-right: 5px;height: 64px;">
+      <h1 id="tuner-name" class="text-left flex-container flex-phone flex-center" style="padding-bottom: 3px; padding-right: 5px;height: 64px;" role="button" tabindex="0" aria-expanded="false" aria-controls="dashboard-panel-description" aria-label="Show or hide tuner details">
         <span class="text-200-px" style="max-width: 450px;padding-right: 10px;"><%= tunerName %></span> <i class="fa-solid fa-chevron-down" style="font-size: 15px;"></i>
       </h1>
       <% if(!publicTuner || tunerLock) { %>
@@ -56,23 +56,23 @@
       </div>
       <% } %>
       <div class="flex-container flex-phone" style="flex: 1;overflow-x: auto;align-items: center;">
-        <div class="plugin-list scroll-left">
+        <div class="plugin-list scroll-left" role="button" tabindex="0" aria-label="Scroll plugin list left">
           <i class="fa-solid fa-chevron-left fa-lg color-4"></i>
         </div>
         <div class="dashboard-panel-plugin-list flex-container hide-phone" style="flex: 1;overflow-x: auto;">
           <div class="flex-container scrollable-container"></div>
         </div>
-        <div class="plugin-list scroll-right">
+        <div class="plugin-list scroll-right" role="button" tabindex="0" aria-label="Scroll plugin list right">
           <i class="fa-solid fa-chevron-right fa-lg color-4"></i>
         </div>
       </div>
       <div style="margin-left: auto;" class="dashboard-panel-plugin-content"></div>
       <div>
-        <button class="users-online-container hide-phone" aria-label="Online users"><i class="fa-solid fa-user"></i> <span class="users-online"></span></button>
+        <button type="button" class="users-online-container hide-phone" aria-label="Online users"><i class="fa-solid fa-user"></i> <span class="users-online" aria-live="polite" aria-atomic="true"></span></button>
         <% if (chatEnabled) { %>
-        <button class="chatbutton hide-phone" aria-label="Chatbox"><i class="fa-solid fa-message"></i></button>
+        <button type="button" class="chatbutton hide-phone" aria-label="Chatbox"><i class="fa-solid fa-message"></i></button>
         <% } %>
-        <button aria-label="Settings" class="hide-phone settings"><i class="fa-solid fa-bars"></i></button>
+        <button type="button" aria-label="Settings" class="hide-phone settings"><i class="fa-solid fa-bars"></i></button>
       </div>
     </div>
   </div>
@@ -121,7 +121,7 @@
 
         <div style="height: 64px;" class="flex-center flex-phone">
           <% presets.forEach(preset => { %>
-          <button class="no-bg color-4 hover-brighten" id="preset<%= preset %>" style="padding: 6px; width: 64px; min-width: 64px;">
+          <button type="button" class="no-bg color-4 hover-brighten" id="preset<%= preset %>" aria-label="Preset <%= preset %>" style="padding: 6px; width: 64px; min-width: 64px;">
             <i class="fa-solid fa-wave-square fa-lg top-10"></i><br>
             <span style="font-size: 10px; color: var(--color-text);" id="preset<%= preset %>-text"></span>
           </button>
@@ -142,7 +142,7 @@
     </div>
   </div>
   <div class="wrapper-outer main-content" style="z-index: 100;">
-    <div id="wrapper">
+    <main id="wrapper" role="main">
       <div class="canvas-container hide-phone">
         <canvas id="signal-canvas"></canvas>
       </div>
@@ -152,7 +152,7 @@
           <div class="flex-container">
             <div class="panel-75 flex-container no-bg">
               <div class="panel-10 no-bg h-100 m-0 m-right-20 hide-phone" style="width: 100px;margin-right: 20px !important;">
-                <button class="playbutton" aria-label="Play / Stop"><i class="fa-solid fa-play fa-lg"></i></button>
+                <button type="button" class="playbutton" aria-label="Play / Stop" aria-pressed="false"><i class="fa-solid fa-play fa-lg"></i></button>
               </div>
               <div class="panel-100 m-0 hover-brighten flex-center tooltip" id="ps-container" style="height: 90px;" data-tooltip="Clicking on the RDS PS will copy the RDS info into the clipboard.">
                 <span class="text-big" id="data-ps"></span>
@@ -304,13 +304,14 @@
             <div class="panel-33 hover-brighten tooltip no-bg-phone" style="min-height: 91px;" data-tooltip="This panel contains the current TX info when RDS is loaded.<br><strong>Clicking on this panel copies the info into the clipboard.</strong>">
               <div id="data-station-container" data-score="0">
                 <h2 style="margin-top: 0;" class="mb-0">
+                  <span class="sr-only">Current station</span>
                   <span id="data-station-name"></span>
                 </h2>
                 <h4 class="m-0">
                   <span id="data-station-city" style="font-size: 16px;"></span> <span class="text-small">[<span id="data-station-itu"></span>]</span>
                 </h4>
                 <span class="text-small">
-                  <span id="data-station-erp"></span> kW [<span id="data-station-pol"></span>] <span class="text-gray">•</span> <span id="data-station-distance"></span> <span class="text-gray">•</span> <span id="data-station-azimuth"></span> <span id="data-station-others" class="hide-phone" style="opacity: 0.7;"></span>
+                <span id="data-station-erp"></span> kW [<span id="data-station-pol"></span>] <span class="text-gray">&bull;</span> <span id="data-station-distance"></span> <span class="text-gray">&bull;</span> <span id="data-station-azimuth"></span> <span id="data-station-others" class="hide-phone" style="opacity: 0.7;" role="button" tabindex="0" aria-label="Show other possible transmitters"></span>
                 </span>
               </div>
             </div>
@@ -348,13 +349,13 @@
           <span style="margin-left: 15px;" class="data-ms">MS</span>
         </h3>
       </div>
-    </div>
+    </main>
 
     <div class="popup-window" id="popup-panel-mobile-settings" style="overflow:visible;">
         <div class="flex-container flex-column flex-phone flex-phone-column" style="height: calc(100%);">
           <div class="popup-header hover-brighten flex-center">
             <p class="color-4" style="margin: 0; padding-left: 10px;">Quick tools</p>
-            <button class="popup-close">✖</button>
+            <button type="button" class="popup-close" aria-label="Close quick tools">&times;</button>
           </div>
           <div class="popup-content text-left flex-container flex-phone flex-column p-10" style="flex: 1;">
 
@@ -408,13 +409,14 @@
     <div class="popup-window" id="popup-panel-chat">
       <div class="flex-container flex-column flex-phone flex-phone-column" style="height: calc(100%);">
         <div class="popup-header hover-brighten flex-center">
-          <p class="color-4" style="margin: 0; padding-left: 10px;">Chat • <span style="color: #bada55;" id="chat-admin"></span> <strong id="chat-identity-nickname"></strong></p>
-          <button class="popup-close">✖</button>
+          <p class="color-4" style="margin: 0; padding-left: 10px;">Chat &bull; <span style="color: #bada55;" id="chat-admin"></span> <strong id="chat-identity-nickname"></strong></p>
+          <button type="button" class="popup-close" aria-label="Close chat">&times;</button>
         </div>
         <div class="popup-content text-left flex-container flex-phone flex-column" style="flex: 1;">
           <div style="text-align: center;white-space-collapse: collapse;">
             <div class="flex-phone flex-container flex-center top-10 bottom-10">
-              <input type="text" id="chat-nickname" name="chat-nickname" placeholder="Nickname" style="width: 150px;border-radius: 15px 0 0 15px;padding-top:0;padding-bottom:0;border: 2px solid var(--color-4)">
+              <label for="chat-nickname" class="sr-only">Nickname</label>
+              <input type="text" id="chat-nickname" name="chat-nickname" aria-label="Nickname" placeholder="Nickname" style="width: 150px;border-radius: 15px 0 0 15px;padding-top:0;padding-bottom:0;border: 2px solid var(--color-4)">
               <button class="br-0 w-100" style="height: 48px; border-radius: 0 15px 15px 0;margin-left:-3px;" id="chat-nickname-save">Save</button>
             </div>
           </div>
@@ -422,7 +424,8 @@
           <div id="chat-chatbox" class="bg-color-1" style="padding: 10px; overflow-y: auto; flex-grow: 1; min-height: 0; flex-basis: 0; min-height: 180px;"></div>
 
           <div class="flex-container flex-phone">
-            <input class="bg-color-2" type="text" id="chat-send-message" name="chat-send-message" placeholder="Send message..." style="background-color: var(--color-2);width: 100%;">
+            <label for="chat-send-message" class="sr-only">Send message</label>
+            <input class="bg-color-2" type="text" id="chat-send-message" name="chat-send-message" aria-label="Send message" placeholder="Send message..." style="background-color: var(--color-2);width: 100%;">
             <button aria-label="Send message" class="chat-send-message-btn br-0" style="width: 80px; height: 48px;"><i class="fa-solid fa-paper-plane"></i></button>
           </div>
         </div>
@@ -433,7 +436,7 @@
       <div class="flex-container flex-column flex-phone flex-phone-column" style="height: calc(100%);">
         <div class="popup-header hover-brighten flex-center">
           <p class="color-4" style="margin: 0; padding-left: 10px;">Other possible transmitters</p>
-          <button class="popup-close">✖</button>
+          <button type="button" class="popup-close" aria-label="Close transmitters list">&times;</button>
         </div>
         <div id="alternative-txes" class="popup-content text-left flex-container flex-phone flex-column" style="flex: 1;">
         </div>
@@ -441,13 +444,13 @@
     </div>
 
     <div id="mobileTray" class="hide-desktop">
-        <button class="playbutton" aria-label="Play / Stop" style="width: 64px; height: 64px; position:absolute;display: block;top: -50%;left: 50%; transform: translateX(-50%);"><i class="fa-solid fa-play fa-lg"></i></button>
+        <button type="button" class="playbutton" aria-label="Play / Stop" aria-pressed="false" style="width: 64px; height: 64px; position:absolute;display: block;top: -50%;left: 50%; transform: translateX(-50%);"><i class="fa-solid fa-play fa-lg"></i></button>
 
         <div style="width: calc(50% - 32px);text-align: center;">
-          <button class="users-online-container" aria-label="Online users" style="display: inline-block;"><i class="fa-solid fa-user"></i> <span class="users-online"></span></button>
+          <button type="button" class="users-online-container" aria-label="Online users" style="display: inline-block;"><i class="fa-solid fa-user"></i> <span class="users-online" aria-live="polite" aria-atomic="true"></span></button>
           
           <% if (chatEnabled) { %>
-            <button class="chatbutton m-10" aria-label="Chatbox" style="display: inline-block;"><i class="fa-solid fa-message"></i></button>
+            <button type="button" class="chatbutton m-10" aria-label="Chatbox" style="display: inline-block;"><i class="fa-solid fa-message"></i></button>
           <% } %>
         </div>
         
@@ -456,8 +459,8 @@
         </div>
 
         <div style="width: calc(50% - 32px);text-align: center;">
-            <button class="m-10 button-dark tuner-mobile-settings" aria-label="Advanced tuner settings" style="display: inline-block;"><i class="fa-solid fa-toolbox"></i></button>
-            <button class="settings m-10" aria-label="Settings" style="display: inline-block;"><i class="fa-solid fa-bars"></i></button>
+            <button type="button" class="m-10 button-dark tuner-mobile-settings" aria-label="Advanced tuner settings" style="display: inline-block;"><i class="fa-solid fa-toolbox"></i></button>
+            <button type="button" class="settings m-10" aria-label="Settings" style="display: inline-block;"><i class="fa-solid fa-bars"></i></button>
         </div>
     </div>
 
@@ -530,7 +533,8 @@
             </div>
             <% } else { %>
             <form action="./login" method="post" id="login-form" class="top-25">
-              <input type="password" id="password" name="password" placeholder="Password" style="width: 145px; border-radius: 15px 0 0 15px" required>
+              <label for="password" class="sr-only">Password</label>
+              <input type="password" id="password" name="password" aria-label="Password" placeholder="Password" style="width: 145px; border-radius: 15px 0 0 15px" required>
               <button type="submit" class="br-0 top-10 tooltip" style="height: 46px; width: 50px; margin-left: -2px;border-radius: 0 15px 15px 0;" role="button" aria-label="Log in" tabindex="0" data-tooltip="Log in">
                 <i class="fa-solid fa-right-to-bracket"></i>
               </button>
@@ -559,10 +563,10 @@
             </div>
           </div>
           <div class="modal-panel-content">
-            <div class="hover-brighten br-0 bg-color-1" style="height: 50px;padding:12px;" onclick="window.open('https://buymeacoffee.com/noobish')">
+            <div class="hover-brighten br-0 bg-color-1" style="height: 50px;padding:12px;" onclick="window.open('https://buymeacoffee.com/noobish')" role="button" tabindex="0" aria-label="Support the developer">
               <strong>Support</strong> the developer!
             </div>
-            <div class="hover-brighten br-0 bg-color-1" style="height: 50px;padding:12px;" onclick="window.open('https://discord.com/invite/ZAVNdS74mC')">
+            <div class="hover-brighten br-0 bg-color-1" style="height: 50px;padding:12px;" onclick="window.open('https://discord.com/invite/ZAVNdS74mC')" role="button" tabindex="0" aria-label="Join FMDX Discord">
               Join our <strong>FMDX.org Discord</strong> community!
             </div>
           </div>
@@ -570,6 +574,7 @@
       </div>
     </div>
   </div>
+  <div id="sr-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="toast-container" aria-live="polite"></div>
   <script src="js/websocket.js"></script>
   <script src="js/webserver.js"></script>
