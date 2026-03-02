@@ -1,11 +1,18 @@
 let Stream;
 let shouldReconnect = true;
 let newVolumeGlobal = 1;
+let playbackToggleInProgress = false;
 
 function syncPlayButtonState(isPlaying) {
     const $playbutton = $('.playbutton');
     $playbutton.attr('aria-pressed', isPlaying ? 'true' : 'false');
     $playbutton.attr('aria-label', isPlaying ? 'Stop playback' : 'Start playback');
+    const $icons = $playbutton.find('.fa-solid');
+    if (isPlaying) {
+        $icons.removeClass('fa-play').addClass('fa-stop');
+    } else {
+        $icons.removeClass('fa-stop').addClass('fa-play');
+    }
 }
 
 function Init(_ev) {
@@ -16,6 +23,11 @@ function Init(_ev) {
 
 function createStream() {
     try {
+        // Hard guard against parallel stream instances.
+        if (Stream) {
+            Stream.Stop();
+            Stream = null;
+        }
         const settings = new _3LAS_Settings();
         Stream = new _3LAS(null, settings);
         Stream.Volume = $('#volumeSlider').val();
@@ -43,33 +55,45 @@ function OnConnectivityCallback(isConnected) {
 
 
 function OnPlayButtonClick(_ev) {
+    if (playbackToggleInProgress) {
+        return;
+    }
+    playbackToggleInProgress = true;
+
     const $playbutton = $('.playbutton');
     const isAppleiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-    if (Stream) {
-        console.log("Stopping stream...");
-        shouldReconnect = false;
+    try {
+        if (Stream) {
+            console.log("Stopping stream...");
+            shouldReconnect = false;
+            destroyStream();
+            syncPlayButtonState(false);
+            if (isAppleiOS && 'audioSession' in navigator) {
+                navigator.audioSession.type = "none";
+            }
+        } else {
+            console.log("Starting stream...");
+            shouldReconnect = true;
+            createStream();
+            if (Stream) {
+                Stream.Start();
+                syncPlayButtonState(true);
+            }
+            if (isAppleiOS && 'audioSession' in navigator) {
+                navigator.audioSession.type = "playback";
+            }
+        }
+    } catch (error) {
+        console.error("Playback toggle failed:", error);
         destroyStream();
-        $playbutton.find('.fa-solid').toggleClass('fa-stop fa-play');
         syncPlayButtonState(false);
-        if (isAppleiOS && 'audioSession' in navigator) {
-            navigator.audioSession.type = "none";
-        }
-    } else {
-        console.log("Starting stream...");
-        shouldReconnect = true;
-        createStream();
-        Stream.Start();
-        $playbutton.find('.fa-solid').toggleClass('fa-play fa-stop');
-        syncPlayButtonState(true);
-        if (isAppleiOS && 'audioSession' in navigator) {
-            navigator.audioSession.type = "playback";
-        }
     }
 
     $playbutton.addClass('bg-gray').prop('disabled', true);
     setTimeout(() => {
         $playbutton.removeClass('bg-gray').prop('disabled', false);
+        playbackToggleInProgress = false;
     }, 3000);
 }
 
