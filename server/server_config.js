@@ -19,6 +19,7 @@ let serverConfig = {
     webserverPort: 8080,
     banlist: [],
     chatEnabled: true,
+    chatHistoryLimit: 50,
     tuningLimit: false,
     tuningLowerLimit: "100",
     tuningUpperLimit: "108",

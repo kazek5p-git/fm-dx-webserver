@@ -505,6 +505,35 @@
               <%- include('_components', {component: 'checkbox', cssClass: '', label: 'Imperial units', id: 'imperial-units'}) %>
             </div>
 
+            <% if (chatEnabled || isAdminAuthenticated) { %>
+            <div class="panel-full no-bg m-0 top-10" id="chat-settings-section" style="max-width: 460px; margin: 0 auto;">
+              <h3 class="m-0 p-10">Chat</h3>
+              <div class="auto" style="max-width: 340px;">
+                <%- include('_components', {component: 'checkbox', cssClass: '', label: 'Read new chat messages', id: 'chat-screen-reader-announcements'}) %>
+                <% if (isAdminAuthenticated) { %>
+                <%- include('_components', {component: 'checkbox', cssClass: '', label: 'Enable chat', id: 'chat-enabled-toggle'}) %>
+                <%- include('_components', { component: 'dropdown', id: 'chat-history-limit-selector', inputId: 'chat-history-limit', label: 'Chat history limit', cssClass: '', placeholder: '50 messages', 
+                                                                          options: [
+                                                                          { value: '10', label: '10 messages' },
+                                                                          { value: '25', label: '25 messages' },
+                                                                          { value: '50', label: '50 messages' },
+                                                                          { value: '75', label: '75 messages' },
+                                                                          { value: '100', label: '100 messages' },
+                                                                          { value: '150', label: '150 messages' },
+                                                                          { value: '200', label: '200 messages' },
+                                                                          { value: '300', label: '300 messages' },
+                                                                          { value: '500', label: '500 messages' },
+                                                                          ]
+                                                                      }) %>
+                <p class="text-small text-gray m-0 bottom-10" id="chat-history-usage" aria-live="polite">Wiadomości w historii: <span id="chat-history-count">0 / 50</span></p>
+                <div class="form-group" style="width: calc(100% - 10px);">
+                  <button type="button" id="clear-chat-history" class="hover-brighten" aria-label="Clear chat history" style="width: 100%; height: 48px; background: var(--color-1); color: var(--color-4);">Clear Chat History</button>
+                </div>
+                <% } %>
+              </div>
+            </div>
+            <% } %>
+
             <% if (isAdminAuthenticated) { %>
             <p class="color-3">You are logged in as an adminstrator.</p>
             <div class="admin-quick-dashboard">

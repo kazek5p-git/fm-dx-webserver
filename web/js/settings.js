@@ -1,9 +1,9 @@
 /**
 * Themes
-* @param main color
-* @param main-bright color
-* @param text color
-* @param background filter color
+* @param main colo
+* @param main-bright colo
+* @param text colo
+* @param background filter colo
 */
 const themes = {
     theme1: [ 'rgb(32, 34, 40)', 'rgb(88, 219, 171)', 'rgb(255, 255, 255)', 'rgb(11, 12, 14)' ], // Mint
@@ -23,6 +23,11 @@ const signalUnits = {
     dbuv: ['dBµV'],
     dbm: ['dBm'],
 };
+const CHAT_SR_ANNOUNCEMENTS_KEY = "chatScreenReaderAnnouncements";
+const CHAT_ENABLED_KEY = "chatEnabled";
+const CHAT_HISTORY_LIMIT_KEY = "chatHistoryLimit";
+const CHAT_HISTORY_COUNT_KEY = "chatHistoryCount";
+const CHAT_HISTORY_LIMIT_DEFAULT = 50;
 
 $(document).ready(() => {
     
@@ -106,7 +111,7 @@ function setTheme(themeName) {
         const newOpacityText = opacityText * 0.75;
         const textColor2 = `rgba(${rgbaComponentsText[0]}, ${rgbaComponentsText[1]}, ${rgbaComponentsText[2]})`;
 
-        // Extracting the RGBA components from themeColors[0] for background color
+        // Extracting the RGBA components from themeColors[0] for background colo
         const rgbaComponentsBackground = themeColors[3].match(/(\d+(\.\d+)?)/g);
         const backgroundOpacity = 0.75;
         const backgroundColorWithOpacity = `rgba(${rgbaComponentsBackground[0]}, ${rgbaComponentsBackground[1]}, ${rgbaComponentsBackground[2]}, ${backgroundOpacity})`;
@@ -135,7 +140,7 @@ function getInitialSettings() {
         dataType: 'json',
         success: function (data) {
 
-            ['qthLatitude', 'qthLongitude', 'defaultTheme', 'bgImage', 'rdsMode', 'rdsTimeout'].forEach(key => {
+            ['qthLatitude', 'qthLongitude', 'defaultTheme', 'bgImage', 'rdsMode', 'rdsTimeout', CHAT_ENABLED_KEY, CHAT_HISTORY_LIMIT_KEY, CHAT_HISTORY_COUNT_KEY].forEach(key => {
                 if (data[key] !== undefined) {
                     localStorage.setItem(key, data[key]);
                 }
@@ -236,6 +241,178 @@ function loadInitialSettings() {
         var isChecked = $(this).is(":checked");
         localStorage.setItem("imperialUnits", isChecked);
     });
+
+    const chatScreenReaderToggle = $("#chat-screen-reader-announcements");
+    if (chatScreenReaderToggle.length) {
+        const chatScreenReaderAnnouncements = localStorage.getItem(CHAT_SR_ANNOUNCEMENTS_KEY);
+        if (chatScreenReaderAnnouncements === null) {
+            localStorage.setItem(CHAT_SR_ANNOUNCEMENTS_KEY, "false");
+        } else if (chatScreenReaderAnnouncements === "true") {
+            chatScreenReaderToggle.prop("checked", true);
+        }
+
+        chatScreenReaderToggle.change(function() {
+            const isChecked = $(this).is(":checked");
+            localStorage.setItem(CHAT_SR_ANNOUNCEMENTS_KEY, isChecked);
+        });
+    }
+
+    const chatEnabledToggle = $("#chat-enabled-toggle");
+    const chatHistoryLimitSelector = $("#chat-history-limit-selector");
+    const chatHistoryLimitInput = $("#chat-history-limit");
+    const chatHistoryCountLabel = $("#chat-history-count");
+
+    const normalizeChatHistoryLimit = (rawValue) => {
+        const parsedValue = Number.parseInt(rawValue, 10);
+        if (!Number.isFinite(parsedValue)) {
+            return CHAT_HISTORY_LIMIT_DEFAULT;
+        }
+        return Math.max(10, Math.min(500, parsedValue));
+    };
+
+    const normalizeChatHistoryCount = (rawValue) => {
+        const parsedValue = Number.parseInt(rawValue, 10);
+        if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+            return 0;
+        }
+        return parsedValue;
+    };
+
+    const setChatHistoryLimitInput = (limitValue) => {
+        const limit = normalizeChatHistoryLimit(limitValue);
+        const matchingOption = chatHistoryLimitSelector.find('.option[data-value="' + limit + '"]');
+
+        if (matchingOption.length) {
+            chatHistoryLimitInput
+                .val(matchingOption.text())
+                .attr('data-value', String(limit));
+        } else {
+            chatHistoryLimitInput
+                .val(limit + ' messages')
+                .attr('data-value', String(limit));
+        }
+    };
+
+    const getSelectedChatHistoryLimit = () => {
+        const selectedValue = chatHistoryLimitInput.attr('data-value') || localStorage.getItem(CHAT_HISTORY_LIMIT_KEY);
+        return normalizeChatHistoryLimit(selectedValue);
+    };
+
+    const setChatHistoryUsage = (countValue, limitValue) => {
+        if (!chatHistoryCountLabel.length) {
+            return;
+        }
+
+        const limit = normalizeChatHistoryLimit(limitValue ?? getSelectedChatHistoryLimit());
+        const count = Math.min(normalizeChatHistoryCount(countValue), limit);
+        chatHistoryCountLabel
+            .text(count + ' / ' + limit)
+            .attr('aria-label', 'Wiadomości w historii ' + count + ' z ' + limit);
+    };
+
+    const persistChatHistoryCount = (countValue) => {
+        const count = normalizeChatHistoryCount(countValue);
+        localStorage.setItem(CHAT_HISTORY_COUNT_KEY, count);
+        return count;
+    };
+
+    const clearChatHistoryButton = $("#clear-chat-history");
+    if (clearChatHistoryButton.length) {
+        clearChatHistoryButton.on("click", function() {
+            const confirmed = window.confirm("Clear chat history for all users?");
+            if (!confirmed) return;
+
+            const button = $(this);
+            button.prop("disabled", true);
+
+            $.ajax({
+                type: 'POST',
+                url: './chat/clear',
+                success: function(response) {
+                    const historyCount = response.historyCount !== undefined
+                        ? persistChatHistoryCount(response.historyCount)
+                        : persistChatHistoryCount(0);
+
+                    setChatHistoryUsage(historyCount);
+                    sendToast('success', 'Chat', response.message || 'Chat history cleared.', false, true);
+                    if (typeof window.handleChatCleared === 'function') {
+                        window.handleChatCleared();
+                    }
+                },
+                error: function(xhr) {
+                    const message = xhr?.responseJSON?.message || 'Unable to clear chat history.';
+                    sendToast('error', 'Chat', message, false, true);
+                },
+                complete: function() {
+                    button.prop("disabled", false);
+                }
+            });
+        });
+    }
+
+    const saveChatAdminSettings = () => {
+        const chatEnabled = chatEnabledToggle.is(":checked");
+        const historyLimit = getSelectedChatHistoryLimit();
+
+        $.ajax({
+            type: 'POST',
+            url: './chat/settings',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                enabled: chatEnabled,
+                historyLimit: historyLimit
+            }),
+            success: function(response) {
+                localStorage.setItem(CHAT_ENABLED_KEY, response.chatEnabled);
+                localStorage.setItem(CHAT_HISTORY_LIMIT_KEY, response.historyLimit);
+                const historyCount = response.historyCount !== undefined
+                    ? persistChatHistoryCount(response.historyCount)
+                    : normalizeChatHistoryCount(localStorage.getItem(CHAT_HISTORY_COUNT_KEY));
+                setChatHistoryLimitInput(response.historyLimit);
+                setChatHistoryUsage(historyCount, response.historyLimit);
+
+                if (response.chatEnabled === false && typeof window.handleChatCleared === 'function') {
+                    window.handleChatCleared();
+                }
+
+                if (response.restartRequired) {
+                    sendToast('info', 'Chat', response.message || 'Chat settings saved. Restart required.', false, true);
+                } else {
+                    sendToast('success', 'Chat', response.message || 'Chat settings saved.', false, true);
+                }
+            },
+            error: function(xhr) {
+                const message = xhr?.responseJSON?.message || 'Unable to save chat settings.';
+                sendToast('error', 'Chat', message, false, true);
+
+                const savedChatEnabled = localStorage.getItem(CHAT_ENABLED_KEY);
+                if (savedChatEnabled !== null) {
+                    chatEnabledToggle.prop("checked", savedChatEnabled === "true");
+                }
+
+                setChatHistoryLimitInput(localStorage.getItem(CHAT_HISTORY_LIMIT_KEY));
+                setChatHistoryUsage(localStorage.getItem(CHAT_HISTORY_COUNT_KEY));
+            }
+        });
+    };
+
+    if (chatEnabledToggle.length && chatHistoryLimitSelector.length && chatHistoryLimitInput.length) {
+        const savedChatEnabled = localStorage.getItem(CHAT_ENABLED_KEY);
+        if (savedChatEnabled !== null) {
+            chatEnabledToggle.prop("checked", savedChatEnabled === "true");
+        }
+
+        setChatHistoryLimitInput(localStorage.getItem(CHAT_HISTORY_LIMIT_KEY));
+        setChatHistoryUsage(localStorage.getItem(CHAT_HISTORY_COUNT_KEY));
+
+        chatEnabledToggle.change(function() {
+            saveChatAdminSettings();
+        });
+
+        chatHistoryLimitSelector.on("click", ".option", function() {
+            setTimeout(saveChatAdminSettings, 0);
+        });
+    }
     
     $('.version-string').text(currentVersion);
     

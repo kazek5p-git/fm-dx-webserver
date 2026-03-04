@@ -7,7 +7,9 @@
     "debug": "node index.js --debug",
     "debug_ffmpeg": "node index.js --ffmpegdebug",
     "debug_full": "node index.js --debug --ffmpegdebug",
-    "webserver": "node index.js"
+    "webserver": "node index.js",
+    "smoke_check": "bash ./scripts/fmdx-smoke-check.sh",
+    "safe_update": "bash ./scripts/fmdx-safe-update.sh"
   },
   "author": "",
   "license": "ISC",

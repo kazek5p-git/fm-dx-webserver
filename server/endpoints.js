@@ -17,6 +17,24 @@ const dataHandler = require('./datahandler');
 const fmdxList = require('./fmdx_list');
 const { allPluginConfigs } = require('./plugins');
 
+let chatServer = null;
+
+router.setChatServer = (server) => {
+    chatServer = server;
+};
+
+function getChatHistoryCount() {
+    if (chatServer && typeof chatServer.getHistoryCount === 'function') {
+        return chatServer.getHistoryCount();
+    }
+
+    if (Array.isArray(storage.chatHistory)) {
+        return storage.chatHistory.length;
+    }
+
+    return 0;
+}
+
 // Endpoints
 router.get('/', (req, res) => {
     let requestIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -249,6 +267,77 @@ router.get('/logout', (req, res) => {
     });
 });
 
+router.post('/chat/clear', (req, res) => {
+    if (!req.session.isAdminAuthenticated) {
+        return res.status(403).json({ success: false, message: 'Only admin can clear chat history.' });
+    }
+
+    if (!chatServer || typeof chatServer.clearHistory !== 'function') {
+        return res.status(503).json({ success: false, message: 'Chat service is not available.' });
+    }
+
+    const clearedMessages = chatServer.clearHistory();
+    const historyCount = getChatHistoryCount();
+    logInfo(`Chat history cleared by admin. Removed messages: ${clearedMessages}`);
+    res.status(200).json({
+        success: true,
+        message: `Chat history cleared (${clearedMessages} messages removed).`,
+        historyCount
+    });
+});
+
+router.post('/chat/settings', (req, res) => {
+    if (!req.session.isAdminAuthenticated) {
+        return res.status(403).json({ success: false, message: 'Only admin can change chat settings.' });
+    }
+
+    const currentLimit = Number.parseInt(serverConfig.webserver.chatHistoryLimit, 10) || 50;
+    const requestedLimit = Number.parseInt(req.body?.historyLimit, 10);
+    const historyLimit = Number.isFinite(requestedLimit)
+        ? Math.min(500, Math.max(10, requestedLimit))
+        : currentLimit;
+
+    let chatEnabled = serverConfig.webserver.chatEnabled;
+    if (req.body?.enabled !== undefined) {
+        chatEnabled = req.body.enabled === true || req.body.enabled === 'true';
+    }
+
+    serverConfig.webserver.chatEnabled = chatEnabled;
+    serverConfig.webserver.chatHistoryLimit = historyLimit;
+
+    if (chatServer && typeof chatServer.setHistoryLimit === 'function') {
+        chatServer.setHistoryLimit(historyLimit);
+    }
+
+    if (!chatEnabled && chatServer && chatServer.clients) {
+        chatServer.clients.forEach((client) => {
+            try {
+                client.close(1000, 'Chat disabled by admin');
+            } catch (e) {
+                // Ignore close errors for stale sockets.
+            }
+        });
+    }
+
+    configSave();
+
+    const restartRequired = chatEnabled && !chatServer;
+    if (restartRequired) {
+        logWarn('Chat was enabled but chat service is not running. Restart required.');
+    }
+
+    res.status(200).json({
+        success: true,
+        message: restartRequired
+            ? 'Chat settings saved. Restart service to enable chat runtime.'
+            : 'Chat settings saved.',
+        chatEnabled,
+        historyLimit,
+        historyCount: getChatHistoryCount(),
+        restartRequired
+    });
+});
+
 router.get('/kick', (req, res) => {
     const ipAddress = req.query.ip; // Extract the IP address parameter from the query string
     // Terminate the WebSocket connection for the specified IP address
@@ -355,6 +444,9 @@ router.get('/static_data', (req, res) => {
         qthLatitude: serverConfig.identification.lat,
         qthLongitude: serverConfig.identification.lon,
         presets: serverConfig.webserver.presets || [],
+        chatEnabled: serverConfig.webserver.chatEnabled !== false,
+        chatHistoryLimit: Number.parseInt(serverConfig.webserver.chatHistoryLimit, 10) || 50,
+        chatHistoryCount: getChatHistoryCount(),
         defaultTheme: serverConfig.webserver.defaultTheme || 'theme1',
         bgImage: serverConfig.webserver.bgImage || '',
         rdsMode: serverConfig.webserver.rdsMode || false,

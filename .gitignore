@@ -14,3 +14,9 @@ web/index.ejs.bak*
 web/login.ejs.bak*
 web/js/main.js.bak*
 web/js/3las/main.js.bak*
+*.bak
+*.bak_*
+*.bak.*
+*.remote.current.js
+.update-snapshots/
+data/

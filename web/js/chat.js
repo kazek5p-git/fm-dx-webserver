@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    const CHAT_SR_ANNOUNCEMENTS_KEY = 'chatScreenReaderAnnouncements';
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const chatSocket = new WebSocket(`${protocol}//${window.location.host}${window.location.pathname}chat`);
     let chatMessageCount = 0;
@@ -9,6 +10,7 @@ $(document).ready(function() {
     const chatIdentityNickname = $('#chat-identity-nickname');
     const chatNicknameInput = $('#chat-nickname');
     const chatNicknameSave = $('#chat-nickname-save');
+    const srStatus = $('#sr-status');
     
     $(".chatbutton").on("click", function () {
         togglePopup("#popup-panel-chat");
@@ -29,6 +31,47 @@ $(document).ready(function() {
     let savedNickname = localStorage.getItem('nickname') || `User ${generateRandomString(5)}`;
     chatNicknameInput.val(savedNickname);
     chatIdentityNickname.text(savedNickname);
+
+    function isChatScreenReaderAnnouncementsEnabled() {
+        return localStorage.getItem(CHAT_SR_ANNOUNCEMENTS_KEY) === 'true';
+    }
+
+    function shouldAnnounceChatMessage() {
+        const isTabInactive = document.visibilityState !== 'visible';
+        const isChatWindowOpen = chatMessages.is(':visible');
+        return isTabInactive || !isChatWindowOpen;
+    }
+
+    function announceChatMessage(messageData) {
+        if (!srStatus.length || !isChatScreenReaderAnnouncementsEnabled() || !shouldAnnounceChatMessage()) {
+            return;
+        }
+
+        const nickname = String(messageData.nickname || 'Unknown user').trim();
+        const message = String(messageData.message || '').trim();
+        if (!message) {
+            return;
+        }
+
+        const prefix = messageData.admin ? 'Admin ' : '';
+        const announcement = `${prefix}${nickname}: ${message}`;
+
+        // Reset first so repeated messages are announced reliably.
+        srStatus.text('');
+        setTimeout(function() {
+            srStatus.text(announcement);
+        }, 30);
+    }
+
+    function clearChatUi() {
+        chatMessages.empty();
+        chatMessageCount = 0;
+        chatMessagesCount.text(chatMessageCount);
+        chatMessagesCount.attr("aria-label", "Chat (0 unread)");
+        chatButton.removeClass('blink').addClass('bg-color-1');
+    }
+
+    window.handleChatCleared = clearChatUi;
     
     chatSocket.onmessage = function(event) {
         const messageData = JSON.parse(event.data);
@@ -37,6 +80,11 @@ $(document).ready(function() {
         if (messageData.type === 'clientIp') {
             chatIdentityNickname.html(isAdmin).append(document.createTextNode(" " + savedNickname));
             chatIdentityNickname.attr('title', messageData.ip);
+        } else if (messageData.type === 'chatCleared') {
+            clearChatUi();
+            if (typeof sendToast === 'function') {
+                sendToast('info', 'Chat', 'Chat history was cleared.', false, false);
+            }
         } else {
             const chatMessage = `
                 <span class="color-2">[${messageData.time}]</span>
@@ -44,6 +92,10 @@ $(document).ready(function() {
                 <span style="color: var(--color-text-2);">${$('<div/>').text(messageData.message).html()}</span><br>
             `;
             chatMessages.append(chatMessage);
+
+            if (!messageData.history) {
+                announceChatMessage(messageData);
+            }
             
             if (chatMessages.is(':visible')) {
                 setTimeout(function() {

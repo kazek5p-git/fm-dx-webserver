@@ -93,6 +93,9 @@ console.log('\x1b[90m' + '─'.repeat(terminalWidth - 1) + '\x1b[0m');
 
 
 const chatWss = createChatServer(storage);
+if (typeof endpoints.setChatServer === 'function') {
+  endpoints.setChatServer(chatWss);
+}
 // Start ffmpeg
 require('./stream/index');
 require('./plugins');
