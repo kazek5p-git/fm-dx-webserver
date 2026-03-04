@@ -97,6 +97,8 @@
         if (container) return;
         container = document.createElement('div');
         container.id = 'rds-expert-container';
+        container.setAttribute('role', 'dialog');
+        container.setAttribute('aria-label', 'RDS Expert advanced decoder');
 
         const remChecked = getPref('remember') === 'true' ? 'checked' : '';
         const allowChecked = getPref('allow_small') === 'true' ? 'checked' : '';
@@ -132,6 +134,8 @@
     function togglePlugin() {
         isVisible = !isVisible;
         const $btn = $('#rds-expert-button');
+        $btn.attr('aria-expanded', String(isVisible));
+        $btn.attr('aria-pressed', String(isVisible));
 
         if (isVisible) {
             createUI();
@@ -157,6 +161,10 @@
                 });
             }
             $btn.addClass('active');
+            const iframeEl = document.getElementById('rds-expert-iframe');
+            if (iframeEl) {
+                iframeEl.focus();
+            }
         } else {
             // Container removal to ensure background activity stops when the plugin is stopped
             if (container) {
@@ -167,7 +175,7 @@
         }
     }
 
-    // Plugin icon injection into the webserver header
+    // Plugin icon injection into the webserver heade
     function createButton(buttonId) {
         (function waitForFunction() {
             const observer = new MutationObserver((mutationsList, observer) => {
@@ -177,12 +185,18 @@
                     const buttonObserver = new MutationObserver(() => {
                         const pluginButton = document.getElementById(`${buttonId}`);
                         if (pluginButton) {
+                            pluginButton.setAttribute('aria-haspopup', 'dialog');
+                            pluginButton.setAttribute('aria-controls', 'rds-expert-container');
+                            pluginButton.setAttribute('aria-expanded', 'false');
+                            pluginButton.setAttribute('aria-pressed', 'false');
                             // Prevents the plugin from starting on smartphones due to insufficient resolution
                             if (window.innerWidth < 480 && window.innerHeight > window.innerWidth) {
                                 pluginButton.setAttribute('data-tooltip', 'Niekompatybilne ze smartfonami!');
+                                pluginButton.setAttribute('aria-disabled', 'true');
                                 $(pluginButton).css('opacity', '0.4');
                                 // Disable the click on smartphones
                             } else {
+                                pluginButton.removeAttribute('aria-disabled');
                                 $(pluginButton).on('click', togglePlugin);
                             }
                             buttonObserver.disconnect();
@@ -273,4 +287,3 @@
     createButton('rds-expert-button');
 
 })();
-
