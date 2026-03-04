@@ -39,6 +39,10 @@ let lastScreenReaderState = {
     signalBucket: null,
     announcedAt: 0
 };
+let lastStereoScreenReaderState = {
+    mode: null,
+    forced: null
+};
 const SCREEN_READER_SIGNAL_STEP_DB = 2;
 const SCREEN_READER_SIGNAL_MIN_INTERVAL_MS = 12000;
 
@@ -305,7 +309,9 @@ function initAccessibility() {
         }
     });
 
-    $('.stereo-container').attr('aria-pressed', 'false');
+    $('.stereo-container')
+        .attr('aria-pressed', 'false')
+        .attr('aria-label', 'Stereo / Mono toggle. Waiting for tuner state.');
     $('.users-online').attr('aria-live', 'polite').attr('aria-atomic', 'true');
 }
 
@@ -456,7 +462,7 @@ function handleWebSocketMessage(event) {
     const averageSignal = sum / signalData.length;
     data.push(averageSignal);
 }
-// Attach the message handler
+// Attach the message handle
 socket.onmessage = handleWebSocketMessage;
 
 const signalBuffer = [];
@@ -1047,6 +1053,42 @@ function announceScreenReaderStatus(parsedData, averageSignal) {
     }
 }
 
+function updateStereoAccessibility(parsedData) {
+    const $stereoContainer = $('.stereo-container');
+    if (!$stereoContainer.length || !parsedData) return;
+
+    const isStereo = Boolean(parsedData.st);
+    const isForcedStereo = String(parsedData.stForced) === '1';
+    const stereoModeLabel = isStereo ? 'Stereo' : 'Mono';
+    const forcedLabel = isForcedStereo ? 'enabled' : 'disabled';
+
+    $stereoContaine
+        .attr('aria-pressed', isForcedStereo ? 'true' : 'false')
+        .attr('aria-label', `Stereo / Mono toggle. Current mode: ${stereoModeLabel}. Forced stereo: ${forcedLabel}.`);
+
+    const modeChanged = stereoModeLabel !== lastStereoScreenReaderState.mode;
+    const forcedChanged = isForcedStereo !== lastStereoScreenReaderState.forced;
+    if (!modeChanged && !forcedChanged) return;
+
+    lastStereoScreenReaderState = {
+        mode: stereoModeLabel,
+        forced: isForcedStereo
+    };
+
+    const $srStereoStatus = $('#sr-stereo-status');
+    if (!$srStereoStatus.length) return;
+
+    let announcement = `Audio mode ${stereoModeLabel}.`;
+    if (forcedChanged) {
+        announcement += ` Forced stereo ${forcedLabel}.`;
+    }
+
+    $srStereoStatus.text('');
+    setTimeout(function () {
+        $srStereoStatus.text(announcement);
+    }, 25);
+}
+
 // Main function to update data elements, optimized
 const updateDataElements = throttle(function(parsedData) {
     updateTextIfChanged($dataFrequency, parsedData.freq);
@@ -1076,7 +1118,7 @@ const updateDataElements = throttle(function(parsedData) {
         $('.data-st.circle1').css('left', '0px');
         $('.data-st.circle2').css('display', 'block');
     }
-    $('.stereo-container').attr('aria-pressed', String(parsedData.stForced) === '1' ? 'true' : 'false');
+    updateStereoAccessibility(parsedData);
     
     updateHtmlIfChanged($dataRt0, processString(parsedData.rt0, parsedData.rt0_errors));
     updateHtmlIfChanged($dataRt1, processString(parsedData.rt1, parsedData.rt1_errors));
