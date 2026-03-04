@@ -311,7 +311,7 @@ function initAccessibility() {
 
     $('.stereo-container')
         .attr('aria-pressed', 'false')
-        .attr('aria-label', 'Stereo / Mono toggle. Waiting for tuner state.');
+        .attr('aria-label', 'Mono');
     $('.users-online').attr('aria-live', 'polite').attr('aria-atomic', 'true');
 }
 
@@ -1060,11 +1060,10 @@ function updateStereoAccessibility(parsedData) {
     const isStereo = Boolean(parsedData.st);
     const isForcedStereo = String(parsedData.stForced) === '1';
     const stereoModeLabel = isStereo ? 'Stereo' : 'Mono';
-    const forcedLabel = isForcedStereo ? 'enabled' : 'disabled';
 
-    $stereoContaine
+    $stereoContainer
         .attr('aria-pressed', isForcedStereo ? 'true' : 'false')
-        .attr('aria-label', `Stereo / Mono toggle. Current mode: ${stereoModeLabel}. Forced stereo: ${forcedLabel}.`);
+        .attr('aria-label', stereoModeLabel);
 
     const modeChanged = stereoModeLabel !== lastStereoScreenReaderState.mode;
     const forcedChanged = isForcedStereo !== lastStereoScreenReaderState.forced;
@@ -1078,14 +1077,9 @@ function updateStereoAccessibility(parsedData) {
     const $srStereoStatus = $('#sr-stereo-status');
     if (!$srStereoStatus.length) return;
 
-    let announcement = `Audio mode ${stereoModeLabel}.`;
-    if (forcedChanged) {
-        announcement += ` Forced stereo ${forcedLabel}.`;
-    }
-
     $srStereoStatus.text('');
     setTimeout(function () {
-        $srStereoStatus.text(announcement);
+        $srStereoStatus.text(stereoModeLabel);
     }, 25);
 }
 
