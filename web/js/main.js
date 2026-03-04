@@ -311,7 +311,7 @@ function initAccessibility() {
 
     $('.stereo-container')
         .attr('aria-pressed', 'false')
-        .attr('aria-label', 'Mono');
+        .attr('aria-label', 'audio:: mono');
     $('.users-online').attr('aria-live', 'polite').attr('aria-atomic', 'true');
 }
 
@@ -1059,7 +1059,7 @@ function updateStereoAccessibility(parsedData) {
 
     const isStereo = Boolean(parsedData.st);
     const isForcedStereo = String(parsedData.stForced) === '1';
-    const stereoModeLabel = isStereo ? 'Stereo' : 'Mono';
+    const stereoModeLabel = isStereo ? 'audio: stereo' : 'audio:: mono';
 
     $stereoContainer
         .attr('aria-pressed', isForcedStereo ? 'true' : 'false')
