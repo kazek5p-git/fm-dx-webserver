@@ -40,8 +40,7 @@ let lastScreenReaderState = {
     announcedAt: 0
 };
 let lastStereoScreenReaderState = {
-    mode: null,
-    forced: null
+    mode: null
 };
 const SCREEN_READER_SIGNAL_STEP_DB = 2;
 const SCREEN_READER_SIGNAL_MIN_INTERVAL_MS = 12000;
@@ -309,9 +308,7 @@ function initAccessibility() {
         }
     });
 
-    $('.stereo-container')
-        .attr('aria-pressed', 'false')
-        .attr('aria-label', 'audio:: mono');
+    $('.stereo-container').attr('aria-label', 'audio:: mono');
     $('.users-online').attr('aria-live', 'polite').attr('aria-atomic', 'true');
 }
 
@@ -1058,20 +1055,15 @@ function updateStereoAccessibility(parsedData) {
     if (!$stereoContainer.length || !parsedData) return;
 
     const isStereo = Boolean(parsedData.st);
-    const isForcedStereo = String(parsedData.stForced) === '1';
     const stereoModeLabel = isStereo ? 'audio: stereo' : 'audio:: mono';
 
-    $stereoContainer
-        .attr('aria-pressed', isForcedStereo ? 'true' : 'false')
-        .attr('aria-label', stereoModeLabel);
+    $stereoContainer.attr('aria-label', stereoModeLabel);
 
     const modeChanged = stereoModeLabel !== lastStereoScreenReaderState.mode;
-    const forcedChanged = isForcedStereo !== lastStereoScreenReaderState.forced;
-    if (!modeChanged && !forcedChanged) return;
+    if (!modeChanged) return;
 
     lastStereoScreenReaderState = {
-        mode: stereoModeLabel,
-        forced: isForcedStereo
+        mode: stereoModeLabel
     };
 
     const $srStereoStatus = $('#sr-stereo-status');
