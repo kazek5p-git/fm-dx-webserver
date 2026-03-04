@@ -44,6 +44,31 @@ let lastStereoScreenReaderState = {
 };
 const SCREEN_READER_SIGNAL_STEP_DB = 2;
 const SCREEN_READER_SIGNAL_MIN_INTERVAL_MS = 12000;
+const A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY = 'a11yAutoTunerAnnouncements';
+const A11Y_STEREO_ANNOUNCEMENTS_KEY = 'a11yStereoAnnouncements';
+
+function getStoredBooleanSetting(storageKey, defaultValue) {
+    const storedValue = localStorage.getItem(storageKey);
+    if (storedValue === null) return defaultValue;
+    return storedValue === 'true';
+}
+
+function isAutoTunerAnnouncementsEnabled() {
+    return getStoredBooleanSetting(A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY, false);
+}
+
+function isStereoAnnouncementsEnabled() {
+    return getStoredBooleanSetting(A11Y_STEREO_ANNOUNCEMENTS_KEY, true);
+}
+
+function applyAccessibilitySettings() {
+    const tunerAnnouncementsEnabled = isAutoTunerAnnouncementsEnabled();
+    $('.users-online')
+        .attr('aria-live', tunerAnnouncementsEnabled ? 'polite' : 'off')
+        .attr('aria-atomic', 'true');
+}
+
+window.applyAccessibilitySettings = applyAccessibilitySettings;
 
 $(document).ready(function () {
     const signalToggle = $("#signal-units-toggle");
@@ -309,7 +334,13 @@ function initAccessibility() {
     });
 
     $('.stereo-container').attr('aria-label', 'audio:: mono');
-    $('.users-online').attr('aria-live', 'polite').attr('aria-atomic', 'true');
+    applyAccessibilitySettings();
+
+    window.addEventListener('storage', function(event) {
+        if (event.key === A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY || event.key === A11Y_STEREO_ANNOUNCEMENTS_KEY) {
+            applyAccessibilitySettings();
+        }
+    });
 }
 
 function getServerTime() {
@@ -1011,6 +1042,8 @@ function getSignalAnnouncementBucket(signalValue) {
 }
 
 function announceScreenReaderStatus(parsedData, averageSignal) {
+    if (!isAutoTunerAnnouncementsEnabled()) return;
+
     const $srStatus = $('#sr-status');
     if (!$srStatus.length) return;
 
@@ -1065,6 +1098,8 @@ function updateStereoAccessibility(parsedData) {
     lastStereoScreenReaderState = {
         mode: stereoModeLabel
     };
+
+    if (!isStereoAnnouncementsEnabled()) return;
 
     const $srStereoStatus = $('#sr-stereo-status');
     if (!$srStereoStatus.length) return;

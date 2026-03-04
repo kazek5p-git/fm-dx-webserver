@@ -28,6 +28,8 @@ const CHAT_ENABLED_KEY = "chatEnabled";
 const CHAT_HISTORY_LIMIT_KEY = "chatHistoryLimit";
 const CHAT_HISTORY_COUNT_KEY = "chatHistoryCount";
 const CHAT_HISTORY_LIMIT_DEFAULT = 50;
+const A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY = "a11yAutoTunerAnnouncements";
+const A11Y_STEREO_ANNOUNCEMENTS_KEY = "a11yStereoAnnouncements";
 
 $(document).ready(() => {
     
@@ -242,20 +244,29 @@ function loadInitialSettings() {
         localStorage.setItem("imperialUnits", isChecked);
     });
 
-    const chatScreenReaderToggle = $("#chat-screen-reader-announcements");
-    if (chatScreenReaderToggle.length) {
-        const chatScreenReaderAnnouncements = localStorage.getItem(CHAT_SR_ANNOUNCEMENTS_KEY);
-        if (chatScreenReaderAnnouncements === null) {
-            localStorage.setItem(CHAT_SR_ANNOUNCEMENTS_KEY, "false");
-        } else if (chatScreenReaderAnnouncements === "true") {
-            chatScreenReaderToggle.prop("checked", true);
+    const bindAccessibilityCheckbox = ($checkbox, storageKey, defaultValue) => {
+        if (!$checkbox.length) return;
+
+        const storedValue = localStorage.getItem(storageKey);
+        if (storedValue === null) {
+            localStorage.setItem(storageKey, defaultValue ? "true" : "false");
+            $checkbox.prop("checked", defaultValue);
+        } else {
+            $checkbox.prop("checked", storedValue === "true");
         }
 
-        chatScreenReaderToggle.change(function() {
+        $checkbox.change(function() {
             const isChecked = $(this).is(":checked");
-            localStorage.setItem(CHAT_SR_ANNOUNCEMENTS_KEY, isChecked);
+            localStorage.setItem(storageKey, isChecked);
+            if (typeof window.applyAccessibilitySettings === "function") {
+                window.applyAccessibilitySettings();
+            }
         });
-    }
+    };
+
+    bindAccessibilityCheckbox($("#a11y-auto-tuner-announcements"), A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY, false);
+    bindAccessibilityCheckbox($("#a11y-stereo-announcements"), A11Y_STEREO_ANNOUNCEMENTS_KEY, true);
+    bindAccessibilityCheckbox($("#chat-screen-reader-announcements"), CHAT_SR_ANNOUNCEMENTS_KEY, false);
 
     const chatEnabledToggle = $("#chat-enabled-toggle");
     const chatHistoryLimitSelector = $("#chat-history-limit-selector");
@@ -412,6 +423,10 @@ function loadInitialSettings() {
         chatHistoryLimitSelector.on("click", ".option", function() {
             setTimeout(saveChatAdminSettings, 0);
         });
+    }
+
+    if (typeof window.applyAccessibilitySettings === "function") {
+        window.applyAccessibilitySettings();
     }
     
     $('.version-string').text(currentVersion);
