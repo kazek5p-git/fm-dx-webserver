@@ -508,6 +508,13 @@
             <div class="panel-full no-bg m-0 top-10" id="accessibility-settings-section" style="max-width: 460px; margin: 0 auto;">
               <h3 class="m-0 p-10">Accessibility</h3>
               <div class="auto" style="max-width: 340px;">
+                <%- include('_components', { component: 'dropdown', id: 'a11y-profile-selector', inputId: 'a11y-profile-input', label: 'Accessibility profile', cssClass: '', placeholder: 'Standard',
+                                                                          options: [
+                                                                          { value: 'quiet', label: 'Quiet' },
+                                                                          { value: 'standard', label: 'Standard' },
+                                                                          { value: 'full', label: 'Full announcements' },
+                                                                          ]
+                                                                      }) %>
                 <%- include('_components', {component: 'checkbox', cssClass: '', label: 'Auto announce tuner status', id: 'a11y-auto-tuner-announcements'}) %>
                 <%- include('_components', {component: 'checkbox', cssClass: '', label: 'Announce Stereo / Mono changes', id: 'a11y-stereo-announcements'}) %>
                 <% if (chatEnabled || isAdminAuthenticated) { %>

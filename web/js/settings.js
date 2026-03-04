@@ -30,6 +30,12 @@ const CHAT_HISTORY_COUNT_KEY = "chatHistoryCount";
 const CHAT_HISTORY_LIMIT_DEFAULT = 50;
 const A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY = "a11yAutoTunerAnnouncements";
 const A11Y_STEREO_ANNOUNCEMENTS_KEY = "a11yStereoAnnouncements";
+const A11Y_PROFILE_KEY = "a11yProfile";
+const A11Y_PROFILE_MAP = {
+    quiet: { label: "Quiet", tuner: false, stereo: false, chat: false },
+    standard: { label: "Standard", tuner: false, stereo: true, chat: false },
+    full: { label: "Full announcements", tuner: true, stereo: true, chat: true },
+};
 
 $(document).ready(() => {
     
@@ -244,6 +250,67 @@ function loadInitialSettings() {
         localStorage.setItem("imperialUnits", isChecked);
     });
 
+    const a11yAutoTunerToggle = $("#a11y-auto-tuner-announcements");
+    const a11yStereoToggle = $("#a11y-stereo-announcements");
+    const chatScreenReaderToggle = $("#chat-screen-reader-announcements");
+    const a11yProfileSelector = $("#a11y-profile-selector");
+    const a11yProfileInput = $("#a11y-profile-input");
+    const includeChatInProfile = chatScreenReaderToggle.length > 0;
+
+    const getStoredBoolean = (storageKey, defaultValue) => {
+        const storedValue = localStorage.getItem(storageKey);
+        if (storedValue === null) {
+            return defaultValue;
+        }
+        return storedValue === "true";
+    };
+
+    const setToggleAndStorage = ($checkbox, storageKey, checkedValue) => {
+        localStorage.setItem(storageKey, checkedValue);
+        if ($checkbox.length) {
+            $checkbox.prop("checked", checkedValue);
+        }
+    };
+
+    const setProfileInput = (profileKey) => {
+        if (!a11yProfileSelector.length || !a11yProfileInput.length) {
+            return;
+        }
+
+        const matchingOption = a11yProfileSelector.find('.option[data-value="' + profileKey + '"]');
+        if (matchingOption.length) {
+            a11yProfileInput
+                .val(matchingOption.text())
+                .attr("data-value", profileKey);
+        } else {
+            a11yProfileInput
+                .val("Custom")
+                .attr("data-value", "custom");
+        }
+    };
+
+    const detectAccessibilityProfile = () => {
+        const currentState = {
+            tuner: getStoredBoolean(A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY, false),
+            stereo: getStoredBoolean(A11Y_STEREO_ANNOUNCEMENTS_KEY, true),
+            chat: getStoredBoolean(CHAT_SR_ANNOUNCEMENTS_KEY, false),
+        };
+
+        for (const [profileKey, profileValues] of Object.entries(A11Y_PROFILE_MAP)) {
+            const tunerMatches = currentState.tuner === profileValues.tuner;
+            const stereoMatches = currentState.stereo === profileValues.stereo;
+            const chatMatches = !includeChatInProfile || currentState.chat === profileValues.chat;
+
+            if (tunerMatches && stereoMatches && chatMatches) {
+                return profileKey;
+            }
+        }
+
+        return "custom";
+    };
+
+    let syncAccessibilityProfileSelector = function() {};
+
     const bindAccessibilityCheckbox = ($checkbox, storageKey, defaultValue) => {
         if (!$checkbox.length) return;
 
@@ -261,12 +328,61 @@ function loadInitialSettings() {
             if (typeof window.applyAccessibilitySettings === "function") {
                 window.applyAccessibilitySettings();
             }
+            syncAccessibilityProfileSelector();
         });
     };
 
-    bindAccessibilityCheckbox($("#a11y-auto-tuner-announcements"), A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY, false);
-    bindAccessibilityCheckbox($("#a11y-stereo-announcements"), A11Y_STEREO_ANNOUNCEMENTS_KEY, true);
-    bindAccessibilityCheckbox($("#chat-screen-reader-announcements"), CHAT_SR_ANNOUNCEMENTS_KEY, false);
+    bindAccessibilityCheckbox(a11yAutoTunerToggle, A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY, false);
+    bindAccessibilityCheckbox(a11yStereoToggle, A11Y_STEREO_ANNOUNCEMENTS_KEY, true);
+    bindAccessibilityCheckbox(chatScreenReaderToggle, CHAT_SR_ANNOUNCEMENTS_KEY, false);
+
+    const applyAccessibilityProfile = (profileKey, showToastNotification) => {
+        const selectedProfile = A11Y_PROFILE_MAP[profileKey];
+        if (!selectedProfile) {
+            return;
+        }
+
+        setToggleAndStorage(a11yAutoTunerToggle, A11Y_AUTO_TUNER_ANNOUNCEMENTS_KEY, selectedProfile.tuner);
+        setToggleAndStorage(a11yStereoToggle, A11Y_STEREO_ANNOUNCEMENTS_KEY, selectedProfile.stereo);
+        setToggleAndStorage(chatScreenReaderToggle, CHAT_SR_ANNOUNCEMENTS_KEY, selectedProfile.chat);
+
+        localStorage.setItem(A11Y_PROFILE_KEY, profileKey);
+        setProfileInput(profileKey);
+
+        if (typeof window.applyAccessibilitySettings === "function") {
+            window.applyAccessibilitySettings();
+        }
+
+        if (showToastNotification && typeof sendToast === "function") {
+            sendToast("success", "Accessibility", 'Profile "' + selectedProfile.label + '" applied.', false, true);
+        }
+    };
+
+    syncAccessibilityProfileSelector = function() {
+        const detectedProfile = detectAccessibilityProfile();
+        localStorage.setItem(A11Y_PROFILE_KEY, detectedProfile);
+        setProfileInput(detectedProfile);
+    };
+
+    if (a11yProfileSelector.length && a11yProfileInput.length) {
+        a11yProfileSelector.on("click", ".option", function() {
+            const selectedProfile = String($(this).data("value") || "");
+            if (!A11Y_PROFILE_MAP[selectedProfile]) {
+                return;
+            }
+
+            applyAccessibilityProfile(selectedProfile, true);
+        });
+
+        const savedProfile = localStorage.getItem(A11Y_PROFILE_KEY);
+        if (savedProfile && A11Y_PROFILE_MAP[savedProfile]) {
+            applyAccessibilityProfile(savedProfile, false);
+        } else {
+            syncAccessibilityProfileSelector();
+        }
+    } else {
+        syncAccessibilityProfileSelector();
+    }
 
     const chatEnabledToggle = $("#chat-enabled-toggle");
     const chatHistoryLimitSelector = $("#chat-history-limit-selector");
